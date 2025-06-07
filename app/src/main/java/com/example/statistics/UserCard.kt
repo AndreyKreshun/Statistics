@@ -26,9 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
 import com.example.statistics.model.User
 import com.example.statistics.model.UserFile
 
@@ -42,46 +40,60 @@ fun UserCard(user: User) {
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier.size(64.dp),
-                contentAlignment = Alignment.BottomEnd
+            // Левая часть карточки
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f) // занимает всё доступное место
             ) {
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        model = user.files.firstOrNull { it.type == "avatar" }?.url,
-                        error = painterResource(R.drawable.ic_launcher_background)
-                    ),
-                    contentDescription = "User Avatar",
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-
-                if (user.isOnline) {
-                    Box(
+                Box(
+                    modifier = Modifier.size(64.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            model = user.files.firstOrNull { it.type == "avatar" }?.url,
+                            error = painterResource(R.drawable.ic_launcher_background)
+                        ),
+                        contentDescription = "User Avatar",
                         modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(Color.Green)
-                            .border(2.dp, Color.White, CircleShape)
+                            .size(64.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    if (user.isOnline) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(Color.Green)
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = "${user.username}, ${user.age}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column {
-                Text(
-                    text = "${user.username}, ${user.age}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-            }
+            // Иконка стрелки в конце карточки
+            Image(
+                painter = painterResource(id = R.drawable.ic_arrow_right),
+                contentDescription = "Arrow",
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
