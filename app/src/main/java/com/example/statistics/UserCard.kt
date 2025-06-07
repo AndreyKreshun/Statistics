@@ -2,6 +2,7 @@ package com.example.statistics
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,70 +27,65 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import coil.compose.rememberImagePainter
 import com.example.statistics.model.User
+import com.example.statistics.model.UserFile
 
 @Composable
 fun UserCard(user: User) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Аватар пользователя
-            Image(
-                painter = rememberImagePainter(
-                    data = user.files.firstOrNull { it.type == "avatar" }?.url,
-                    builder = {
-                        crossfade(true)
-                        placeholder(R.drawable.ic_launcher_background) // Замените на ваш placeholder
-                    }
-                ),
-                contentDescription = "User Avatar",
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            Box(
+                modifier = Modifier.size(64.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = user.files.firstOrNull { it.type == "avatar" }?.url,
+                        error = painterResource(R.drawable.ic_launcher_background)
+                    ),
+                    contentDescription = "User Avatar",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+
+                if (user.isOnline) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(Color.Green)
+                            .border(2.dp, Color.White, CircleShape)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Информация о пользователе
             Column {
                 Text(
-                    text = user.username,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "${user.username}, ${user.age}",
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "${user.age} лет",
-                    style = MaterialTheme.typography.bodyMedium
-                )
 
-                // Индикатор онлайн статуса
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(if (user.isOnline) Color.Green else Color.Gray)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (user.isOnline) "Online" else "Offline",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
             }
         }
     }
 }
+
 
 
 @Preview(showBackground = true)
@@ -104,7 +100,11 @@ fun PreviewUserCard() {
                 isOnline = true,
                 age = 25,
                 files = listOf(
-
+                    UserFile(
+                        id = 1,
+                        url = "",
+                        type = "avatar"
+                    )
                 )
             )
         )

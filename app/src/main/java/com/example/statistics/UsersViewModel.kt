@@ -1,5 +1,6 @@
 package com.example.statistics
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,10 +27,13 @@ class UsersViewModel : ViewModel() {
     fun loadUsers() {
         viewModelScope.launch {
             try {
-                _users.value = apiService.getUsers().users
+                val result = apiService.getUsers()
+                Log.d("UsersViewModel", "Получено пользователей: ${result.users.size}")
+                _users.value = result.users
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("UsersViewModel", "Ошибка при загрузке пользователей", e)
             }
         }
     }
+
 }
