@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 fun VisitorsCard(
     visitorCount: Int,
     growth: Boolean,
-    message: String
+    message: String,
 ) {
     Card(
         modifier = Modifier
@@ -40,7 +40,7 @@ fun VisitorsCard(
                     painter = painterResource(id = R.drawable.ic_graph_up),
                     contentDescription = "График роста",
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(90.dp)
                         .padding(end = 12.dp)
                 )
             }
@@ -49,7 +49,7 @@ fun VisitorsCard(
                     painter = painterResource(id = R.drawable.ic_down_graph),
                     contentDescription = "График падения",
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(90.dp)
                         .padding(end = 12.dp)
                 )
             }
