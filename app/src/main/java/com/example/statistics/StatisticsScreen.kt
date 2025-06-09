@@ -1,11 +1,8 @@
 package com.example.statistics
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,20 +16,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
 import com.example.statistics.model.User
 import com.example.statistics.ui.button.PeriodButton
-import com.example.statistics.ui.theme.femaleColor
-import com.example.statistics.ui.theme.maleColor
+import com.example.statistics.ui.theme.FemaleColor
+import com.example.statistics.ui.theme.MaleColor
 
 @Composable
 fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel()) {
@@ -201,8 +194,8 @@ fun GenderAgeSection(users: List<User>) {
                 RingChart(
                     malePercentage = malePercentage,
                     femalePercentage = femalePercentage,
-                    maleColor = maleColor,
-                    femaleColor = femaleColor
+                    maleColor = MaleColor,
+                    femaleColor = FemaleColor
                 )
             }
         }
@@ -213,30 +206,37 @@ fun GenderAgeSection(users: List<User>) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            GenderLegendItem(color = maleColor, label = "Мужчины", percentage = malePercentage)
+            GenderLegendItem(color = MaleColor, label = "Мужчины", percentage = malePercentage)
             Spacer(modifier = Modifier.width(16.dp))
-            GenderLegendItem(color = femaleColor, label = "Женщины", percentage = femalePercentage)
+            GenderLegendItem(color = FemaleColor, label = "Женщины", percentage = femalePercentage)
         }
 
-        val ageGroups = listOf(
-            "До 18" to users.count { it.age < 18 },
-            "18-21" to users.count { it.age in 18..21 },
-            "22-25" to users.count { it.age in 22..25 },
-            "26-30" to users.count { it.age in 26..30 },
-            "31-35" to users.count { it.age in 31..35 },
-            "36-40" to users.count { it.age in 36..40 },
-            "41-50" to users.count { it.age in 41..50 },
-            "50+" to users.count { it.age > 50 }
+        val ageGroups: List<Pair<String, IntRange>> = listOf(
+            "<18" to (0..18),
+            "18–21" to (18..21),
+            "22–25" to (22..25),
+            "26–30" to (26..30),
+            "31–35" to (31..35),
+            "36–40" to (36..40),
+            "40–50" to (40..50),
+            ">50" to (51..150) // верхняя граница условная
         )
 
-        ageGroups.forEach { (group, count) ->
-            if (count > 0) {
+
+        ageGroups.forEach { (label: String, range: IntRange) ->
+            val maleCount = users.count { it.sex == "M" && it.age in range }
+            val femaleCount = users.count { it.sex == "W" && it.age in range }
+
+            val malePercentage = if (totalUsers > 0) maleCount * 100f / totalUsers else 0f
+            val femalePercentage = if (totalUsers > 0) femaleCount * 100f / totalUsers else 0f
+
                 AgeGroupItem(
-                    ageGroup = group,
-                    percentage = if (totalUsers > 0) (count * 100f / totalUsers) else 0f
+                    ageGroup = label,
+                    malePercentage = malePercentage,
+                    femalePercentage = femalePercentage
                 )
-            }
         }
+
     }
 }
 
@@ -304,40 +304,71 @@ fun GenderLegendItem(color: Color, label: String, percentage: Float) {
 
 
 @Composable
-fun AgeGroupItem(ageGroup: String, percentage: Float) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
+fun AgeGroupItem(
+    ageGroup: String,
+    malePercentage: Float,
+    femalePercentage: Float
+) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 6.dp)) {
+
         Text(
             text = ageGroup,
-            modifier = Modifier.width(60.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        LinearProgressIndicator(
-            progress = percentage / 100f,
-            modifier = Modifier
-                .weight(1f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.primaryContainer
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = "${"%.1f".format(percentage)}%",
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 4.dp)
         )
+
+        // Мужчины
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Spacer(modifier = Modifier.width(80.dp))
+            LinearProgressIndicator(
+                progress = malePercentage / 100f,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = MaleColor,
+                trackColor = Color.Transparent
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "${"%.1f".format(malePercentage)}%",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Женщины
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Spacer(modifier = Modifier.width(80.dp))
+            LinearProgressIndicator(
+                progress = femalePercentage / 100f,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = FemaleColor,
+                trackColor = Color.Transparent
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "${"%.1f".format(femalePercentage)}%",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
     }
 }
+
+
 
 @Composable
 fun Observers(){

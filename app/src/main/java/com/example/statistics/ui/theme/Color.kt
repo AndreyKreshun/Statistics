@@ -10,5 +10,5 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-val maleColor = Color(0xFFFF2E00)
-val femaleColor = Color(0xFFF99963)
+val MaleColor = Color(0xFFFF2E00)
+val FemaleColor = Color(0xFFF99963)
