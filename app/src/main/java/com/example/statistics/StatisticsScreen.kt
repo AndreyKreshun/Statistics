@@ -22,17 +22,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.statistics.model.Statistic
 import com.example.statistics.model.User
 import com.example.statistics.ui.button.PeriodButton
 import com.example.statistics.ui.theme.FemaleColor
 import com.example.statistics.ui.theme.MaleColor
 
 @Composable
-fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel()) {
+fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel(),
+                     statisticsViewModel: StatisticsViewModel = viewModel()) {
     val users by usersViewModel.users
+    val statistics by statisticsViewModel.statistics
 
     LaunchedEffect(Unit) {
         usersViewModel.loadUsers()
+        statisticsViewModel.loadStatistics()
     }
 
     val topVisitors = remember(users) {
@@ -56,7 +60,7 @@ fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Visitors(topVisitors = topVisitors)
+        Visitors(topVisitors = topVisitors, statistics = statistics)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -109,7 +113,10 @@ fun VisitorsSection(visitorCount: Int) {
 }
 
 @Composable
-fun Visitors(topVisitors: List<User>) {
+fun Visitors(
+    topVisitors: List<User>,
+    statistics: List<Statistic>
+) {
     Column {
         Text(
             text = "Чаще всех посещают Ваш профиль",
@@ -121,14 +128,32 @@ fun Visitors(topVisitors: List<User>) {
         if (topVisitors.isEmpty()) {
             Text("Нет данных о посетителях", color = Color.Gray)
         } else {
+            val sortedVisitors = remember(topVisitors, statistics) {
+                topVisitors.sortedByDescending { user ->
+                    calculateVisitCount(user.id, statistics)
+                }
+            }
+
             Column {
-                topVisitors.forEach { user ->
-                    UserCard(user = user)
+                sortedVisitors.forEachIndexed { index, user ->
+                    UserCard(
+                        user = user,
+                        position = index + 1,
+                        visitCount = calculateVisitCount(user.id, statistics)
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
     }
+}
+
+
+// Выносим функцию calculateVisitCount в отдельный composable-файл
+private fun calculateVisitCount(userId: Int, statistics: List<Statistic>): Int {
+    return statistics
+        .filter { it.user_id == userId && it.type == "view" }
+        .sumOf { it.dates.size }
 }
 
 

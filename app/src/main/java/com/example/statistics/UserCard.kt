@@ -31,7 +31,7 @@ import com.example.statistics.model.User
 import com.example.statistics.model.UserFile
 
 @Composable
-fun UserCard(user: User) {
+fun UserCard(user: User, position: Int, visitCount: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -45,10 +45,10 @@ fun UserCard(user: User) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Левая часть карточки
+            // Основное содержимое карточки
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f) // занимает всё доступное место
+                modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier.size(64.dp),
@@ -78,47 +78,20 @@ fun UserCard(user: User) {
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "${user.username}, ${user.age}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
 
-                Column {
-                    Text(
-                        text = "${user.username}, ${user.age}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
 
-            // Иконка стрелки в конце карточки
+            // Иконка стрелки
             Image(
                 painter = painterResource(id = R.drawable.ic_arrow_right),
                 contentDescription = "Arrow",
                 modifier = Modifier.size(24.dp)
             )
         }
-    }
-}
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewUserCard() {
-    MaterialTheme {
-        UserCard(
-            user = User(
-                id = 1,
-                sex = "M",
-                username = "ivan",
-                isOnline = true,
-                age = 25,
-                files = listOf(
-                    UserFile(
-                        id = 1,
-                        url = "",
-                        type = "avatar"
-                    )
-                )
-            )
-        )
     }
 }
