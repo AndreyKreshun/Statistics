@@ -1,5 +1,7 @@
 package com.example.statistics
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,6 +30,12 @@ import com.example.statistics.model.User
 import com.example.statistics.ui.button.PeriodButton
 import com.example.statistics.ui.theme.FemaleColor
 import com.example.statistics.ui.theme.MaleColor
+import java.text.SimpleDateFormat
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel(),
@@ -56,7 +65,8 @@ fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel(),
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        VisitorsSection(visitorCount = users.size)
+        VisitorsSection(visitorCount = users.size,
+            statistics = statistics)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -73,8 +83,9 @@ fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel(),
 }
 
 @Composable
-fun VisitorsSection(visitorCount: Int) {
+fun VisitorsSection(visitorCount: Int, statistics: List<Statistic>) {
     var selectedPeriod by remember { mutableStateOf("days") }
+
     Column {
         Text(
             text = "Посетители",
@@ -84,11 +95,11 @@ fun VisitorsSection(visitorCount: Int) {
         )
 
         VisitorsCard(
-            visitorCount = 1356,
+            visitorCount = visitorCount,
             growth = true,
             message = "Количество посетителей в этом месяце выросло"
         )
-        
+
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
@@ -109,8 +120,74 @@ fun VisitorsSection(visitorCount: Int) {
                 onClick = { selectedPeriod = "months" }
             )
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 👇 График в зависимости от периода
+        ChartByPeriod(statistics = statistics, period = selectedPeriod)
     }
 }
+@Composable
+fun ChartByPeriod(statistics: List<Statistic>, period: String) {
+    val dateFormatter = SimpleDateFormat("ddMMyyyy", Locale.getDefault())
+    val calendar = Calendar.getInstance()
+
+    // Все даты просмотров
+    val allDates = statistics
+        .filter { it.type == "view" }
+        .flatMap { it.dates }
+        .mapNotNull {
+            try {
+                dateFormatter.parse(it.toString())
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+    val grouped: Map<String, Int> = when (period) {
+        "days" -> {
+            allDates.groupingBy {
+                SimpleDateFormat("dd.MM", Locale.getDefault()).format(it)
+            }.eachCount()
+        }
+        "weeks" -> {
+            allDates.groupingBy {
+                val week = calendar.apply { time = it }.get(Calendar.WEEK_OF_YEAR)
+                "Неделя $week"
+            }.eachCount()
+        }
+        "months" -> {
+            allDates.groupingBy {
+                val month = calendar.apply { time = it }.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale("ru")) ?: ""
+                month.replaceFirstChar { it.uppercase() }
+            }.eachCount()
+        }
+        else -> emptyMap()
+    }
+
+    val sortedData = grouped.toSortedMap(compareBy {
+        when (period) {
+            "days" -> SimpleDateFormat("dd.MM", Locale.getDefault()).parse(it)?.time ?: 0
+            "weeks" -> it.filter { ch -> ch.isDigit() }.toIntOrNull() ?: 0
+            "months" -> listOf(
+                "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+            ).indexOf(it)
+            else -> 0
+        }
+    })
+
+    if (sortedData.isEmpty()) {
+        Text("Нет данных для отображения", color = Color.Gray)
+    } else {
+        LineChart(
+            labels = sortedData.keys.toList(),
+            values = sortedData.values.toList()
+        )
+    }
+}
+
+
 
 @Composable
 fun Visitors(
@@ -147,6 +224,85 @@ fun Visitors(
         }
     }
 }
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun parseDate(intDate: Int): LocalDate {
+    // Пример: 5092024 → 05.09.2024
+    val str = intDate.toString().padStart(8, '0')
+    val day = str.substring(0, 2).toInt()
+    val month = str.substring(2, 4).toInt()
+    val year = str.substring(4).toInt()
+    return LocalDate.of(year, month, day)
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun groupStatisticsByPeriod(statistics: List<Statistic>, period: String): Map<String, Int> {
+    val dateViews = statistics
+        .filter { it.type == "view" }
+        .flatMap { it.dates }
+        .map(::parseDate)
+
+    return when (period) {
+        "days" -> dateViews.groupingBy { it.format(DateTimeFormatter.ofPattern("dd.MM")) }.eachCount()
+        "weeks" -> dateViews.groupingBy { it.with(DayOfWeek.MONDAY).format(DateTimeFormatter.ofPattern("dd.MM")) }.eachCount()
+        "months" -> dateViews.groupingBy { it.format(DateTimeFormatter.ofPattern("MM.yyyy")) }.eachCount()
+        else -> emptyMap()
+    }
+}
+
+@Composable
+fun LineChart(labels: List<String>, values: List<Int>) {
+    val maxValue = (values.maxOrNull() ?: 1).toFloat()
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Canvas(modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .padding(horizontal = 8.dp)
+        ) {
+            val spacing = size.width / (values.size - 1).coerceAtLeast(1)
+            val points = values.mapIndexed { index, value ->
+                Offset(
+                    x = index * spacing,
+                    y = size.height - (value / maxValue) * size.height
+                )
+            }
+
+            // Линия графика
+            for (i in 0 until points.size - 1) {
+                drawLine(
+                    color = Color.Red,
+                    start = points[i],
+                    end = points[i + 1],
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round
+                )
+            }
+
+            // Точки
+            points.forEach {
+                drawCircle(Color.Red, radius = 6f, center = it)
+            }
+        }
+
+        // Подписи оси X
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            labels.forEach { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
 
 
 // Выносим функцию calculateVisitCount в отдельный composable-файл
