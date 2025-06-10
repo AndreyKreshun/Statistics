@@ -1,4 +1,4 @@
-package com.example.statistics
+package com.example.statistics.viewmodels
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
@@ -6,9 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.statistics.model.ApiService
 import com.example.statistics.model.User
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

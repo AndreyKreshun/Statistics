@@ -1,5 +1,6 @@
-package com.example.statistics
+package com.example.statistics.viewmodels
 
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,7 +12,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class StatisticsViewModel : ViewModel() {
     private val _statistics = mutableStateOf<List<Statistic>>(emptyList())
-    val statistics: androidx.compose.runtime.State<List<Statistic>> = _statistics
+    val statistics: State<List<Statistic>> = _statistics
 
     private val retrofit = Retrofit.Builder()
         .baseUrl("http://test.rikmasters.ru/api/")
