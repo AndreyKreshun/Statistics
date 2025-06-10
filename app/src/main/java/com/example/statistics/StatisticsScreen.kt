@@ -74,7 +74,7 @@ fun StatisticsScreen(usersViewModel: UsersViewModel = viewModel(),
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        GenderAgeSection(users = users)
+        GenderAgeSection(users = users, statistics = statistics)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -123,7 +123,6 @@ fun VisitorsSection(visitorCount: Int, statistics: List<Statistic>) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 👇 График в зависимости от периода
         ChartByPeriod(statistics = statistics, period = selectedPeriod)
     }
 }
@@ -132,7 +131,6 @@ fun ChartByPeriod(statistics: List<Statistic>, period: String) {
     val dateFormatter = SimpleDateFormat("ddMMyyyy", Locale.getDefault())
     val calendar = Calendar.getInstance()
 
-    // Все даты просмотров
     val allDates = statistics
         .filter { it.type == "view" }
         .flatMap { it.dates }
@@ -227,27 +225,11 @@ fun Visitors(
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun parseDate(intDate: Int): LocalDate {
-    // Пример: 5092024 → 05.09.2024
     val str = intDate.toString().padStart(8, '0')
     val day = str.substring(0, 2).toInt()
     val month = str.substring(2, 4).toInt()
     val year = str.substring(4).toInt()
     return LocalDate.of(year, month, day)
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-fun groupStatisticsByPeriod(statistics: List<Statistic>, period: String): Map<String, Int> {
-    val dateViews = statistics
-        .filter { it.type == "view" }
-        .flatMap { it.dates }
-        .map(::parseDate)
-
-    return when (period) {
-        "days" -> dateViews.groupingBy { it.format(DateTimeFormatter.ofPattern("dd.MM")) }.eachCount()
-        "weeks" -> dateViews.groupingBy { it.with(DayOfWeek.MONDAY).format(DateTimeFormatter.ofPattern("dd.MM")) }.eachCount()
-        "months" -> dateViews.groupingBy { it.format(DateTimeFormatter.ofPattern("MM.yyyy")) }.eachCount()
-        else -> emptyMap()
-    }
 }
 
 @Composable
@@ -268,7 +250,7 @@ fun LineChart(labels: List<String>, values: List<Int>) {
                 )
             }
 
-            // Линия графика
+
             for (i in 0 until points.size - 1) {
                 drawLine(
                     color = Color.Red,
@@ -279,13 +261,12 @@ fun LineChart(labels: List<String>, values: List<Int>) {
                 )
             }
 
-            // Точки
+
             points.forEach {
                 drawCircle(Color.Red, radius = 6f, center = it)
             }
         }
 
-        // Подписи оси X
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
@@ -305,7 +286,6 @@ fun LineChart(labels: List<String>, values: List<Int>) {
 
 
 
-// Выносим функцию calculateVisitCount в отдельный composable-файл
 private fun calculateVisitCount(userId: Int, statistics: List<Statistic>): Int {
     return statistics
         .filter { it.user_id == userId && it.type == "view" }
@@ -314,13 +294,21 @@ private fun calculateVisitCount(userId: Int, statistics: List<Statistic>): Int {
 
 
 @Composable
-fun GenderAgeSection(users: List<User>) {
+fun GenderAgeSection(users: List<User>, statistics: List<Statistic>) {
     var selectedPeriod by remember { mutableStateOf("today") }
-    val totalUsers = users.size
-    val maleCount = users.count { it.sex == "M" }
-    val femaleCount = users.count { it.sex == "W" }
-    val malePercentage = if (totalUsers > 0) (maleCount * 100f / totalUsers) else 0f
-    val femalePercentage = if (totalUsers > 0) (femaleCount * 100f / totalUsers) else 0f
+    val filteredUsers = remember(users, statistics, selectedPeriod) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            filterUsersByStatisticPeriod(users, statistics, selectedPeriod)
+        } else {
+            users
+        }
+    }
+    val totalUsers = filteredUsers.size
+    val maleCount = filteredUsers.count { it.sex == "M" }
+    val femaleCount = filteredUsers.count { it.sex == "W" }
+
+    val malePercentage = if (totalUsers > 0) maleCount * 100f / totalUsers else 0f
+    val femalePercentage = if (totalUsers > 0) femaleCount * 100f / totalUsers else 0f
 
     Column {
         Text(
@@ -330,7 +318,6 @@ fun GenderAgeSection(users: List<User>) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // Кнопки выбора периода
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
@@ -411,15 +398,42 @@ fun GenderAgeSection(users: List<User>) {
             val malePercentage = if (totalUsers > 0) maleCount * 100f / totalUsers else 0f
             val femalePercentage = if (totalUsers > 0) femaleCount * 100f / totalUsers else 0f
 
-                AgeGroupItem(
-                    ageGroup = label,
-                    malePercentage = malePercentage,
-                    femalePercentage = femalePercentage
-                )
+            AgeGroupItem(
+                ageGroup = label,
+                malePercentage = malePercentage,
+                femalePercentage = femalePercentage
+            )
         }
 
     }
 }
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun filterUsersByStatisticPeriod(
+    users: List<User>,
+    statistics: List<Statistic>,
+    period: String
+): List<User> {
+    val now = LocalDate.now()
+
+    return users.filter { user ->
+        statistics
+            .filter { it.user_id == user.id && it.type == "view" }
+            .flatMap { it.dates }
+            .map(::parseDate)
+            .any { visitDate ->
+                when (period) {
+                    "today" -> visitDate.isEqual(now)
+                    "week" -> visitDate.isAfter(now.minusDays(7)) || visitDate.isEqual(now)
+                    "month" -> visitDate.isAfter(now.minusDays(30)) || visitDate.isEqual(now)
+                    "all time" -> true
+                    else -> true
+                }
+            }
+    }
+}
+
+
 
 @Composable
 fun RingChart(
@@ -439,7 +453,6 @@ fun RingChart(
         val rect = Rect(center - Offset(radius - strokeWidth / 2, radius - strokeWidth / 2),
             center + Offset(radius - strokeWidth / 2, radius - strokeWidth / 2))
 
-        // Мужчины
         drawArc(
             color = maleColor,
             startAngle = -90f,
@@ -450,7 +463,6 @@ fun RingChart(
             topLeft = Offset(0f, 0f)
         )
 
-        // Женщины
         drawArc(
             color = femaleColor,
             startAngle = -90f + sweepMale,
@@ -501,7 +513,6 @@ fun AgeGroupItem(
             modifier = Modifier.padding(bottom = 4.dp)
         )
 
-        // Мужчины
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
